@@ -1,0 +1,10 @@
+[meta]
+name     = "Customize CP Counter"
+author   = "XertroV"
+category = "Race"
+version  = "0.2.3"
+# siteid   = 355
+
+[script]
+#__DEFINES__
+# dependencies = ["Camera", "VehicleState"]

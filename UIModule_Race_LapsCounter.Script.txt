@@ -1,0 +1,243 @@
+
+<manialink name="UIModule_Race_LapsCounter" version="3">
+
+<!-- @Component start component-cmgame-uimodules -->
+<framemodel id="component-cmgame-uimodules">
+		</framemodel>
+<!-- @Component end component-cmgame-uimodules -->
+
+<stylesheet>
+	<style class="text-default" textfont="OswaldMono" textemboss="1" textcolor="ffffff" textsize="10" />
+</stylesheet>
+<frame z-index="-2" hidden="1" id="frame-global">
+	<frame  id="Race_LapsCounter" class="component-cmgame-uimodules-module" pos="155.7 80." scale="1." hidden="0" data-customizable-module-enabled="1" >
+		<frame id="frame-laps-counter">
+			<label halign="right" valign="center" class="text-default" id="label-laps-counter" />
+		</frame>
+		<frame id="frame-checkpoints-counter">
+			<label halign="right" valign="center" class="text-default" id="label-checkpoints-counter" />
+		</frame>
+	</frame>
+</frame>
+
+<script><!--
+
+// @Component start component-cmgame-uimodules
+// /*
+
+#Include "Libs/Nadeo/CMGame/Utils/Tools.Script.txt" as Component_CMGame_UIModules_Tools
+#Include "Libs/Nadeo/CMGame/Modes/UIModules_Common.Script.txt" as Component_CMGame_UIModules_UIModules_Common
+
+#Struct Component_CMGame_UIModules_K_Module {
+	CMlControl Control;
+	Boolean IsCustom;
+	Component_CMGame_UIModules_UIModules_Common::K_ModuleProperties DefaultProperties;
+}
+
+// */
+// @Component end component-cmgame-uimodules
+
+#Include "TextLib" as TL
+#Include "MathLib" as ML
+#Include "Libs/Nadeo/TMGame/Modes/MV_Utils.Script.txt" as MV_Utils
+#Include "Libs/Nadeo/TMGame/Modes/Base/UIModules/Helpers_Client.Script.txt" as RaceHelpers
+#Include "Libs/Nadeo/Trackmania/Stores/UserStore_ML.Script.txt" as UserStore
+
+
+
+// @Component start component-cmgame-uimodules
+// /*
+
+Component_CMGame_UIModules_K_Module[Text] Component_CMGame_UIModules_Private_UpdateModulesProperties(Component_CMGame_UIModules_K_Module[Text] _UIModules, Component_CMGame_UIModules_UIModules_Common::K_ModuleProperties[Text] _ModulesProperties) {
+	declare Component_CMGame_UIModules_K_Module[Text] UIModules = _UIModules;
+	foreach (ModuleId => Module in _UIModules) {
+		// Module properties are customized
+		if (_ModulesProperties.existskey(ModuleId)) {
+			declare Component_CMGame_UIModules_UIModules_Common::K_ModuleProperties ModuleProperties = _ModulesProperties[ModuleId];
+			Module.Control.RelativePosition_V3 = ModuleProperties.Position;
+			Module.Control.RelativeScale = ModuleProperties.Scale;
+			Module.Control.Visible = ModuleProperties.Visible;
+			UIModules[ModuleId].IsCustom = True;
+		}
+		// Module properties are not customized anymore
+		else if (Module.IsCustom) {
+			Module.Control.RelativePosition_V3 = Module.DefaultProperties.Position;
+			Module.Control.RelativeScale = Module.DefaultProperties.Scale;
+			Module.Control.Visible = Module.DefaultProperties.Visible;
+			UIModules[ModuleId].IsCustom = False;
+		}
+	}
+	return UIModules;
+}
+
+Component_CMGame_UIModules_K_Module[Text] Component_CMGame_UIModules_Private_Initialize() {
+	// Find UI modules controls
+	declare Component_CMGame_UIModules_K_Module[Text] Component_CMGame_UIModules_UIModules;
+	Page.GetClassChildren("component-cmgame-uimodules-module", Page.MainFrame, True);
+	foreach (Control in Page.GetClassChildren_Result) {
+		declare TrueControlHandle = Control;
+		assert(TrueControlHandle.ControlId != "", "[UIModules] A UI module CMlControl must have an id");
+		assert(!Component_CMGame_UIModules_UIModules.existskey(TrueControlHandle.ControlId), "[UIModules] Two UI modules CMlControl cannot share the same id '"^TrueControlHandle.ControlId^"'");
+		if (
+			TrueControlHandle.DataAttributeExists("customizable-module-enabled") &&
+			Component_CMGame_UIModules_Tools::TextToBoolean(TrueControlHandle.DataAttributeGet("customizable-module-enabled"))
+		) {
+			Component_CMGame_UIModules_UIModules[TrueControlHandle.ControlId] = Component_CMGame_UIModules_K_Module {
+				Control = TrueControlHandle,
+				IsCustom = False,
+				DefaultProperties = Component_CMGame_UIModules_UIModules_Common::K_ModuleProperties {
+					Position = TrueControlHandle.RelativePosition_V3,
+					Scale = TrueControlHandle.RelativeScale,
+					Visible = TrueControlHandle.Visible
+				}
+			};
+		}
+	}
+	return Component_CMGame_UIModules_UIModules;
+}
+
+***MainInit***
+***
+declare netread Component_CMGame_UIModules_UIModules_Common::K_ModuleProperties[Text] Net_LibUI3_CustomizableModule_Properties for Teams[0];
+declare netread Integer Net_LibUI3_CustomizableModule_PropertiesUpdate for Teams[0];
+
+declare Component_CMGame_UIModules_K_Module[Text] Component_CMGame_UIModules_UIModules;
+***
+
+***MainStart***
+***
+declare Integer ModulesPropertiesUpdate = Net_LibUI3_CustomizableModule_PropertiesUpdate;
+
+Component_CMGame_UIModules_UIModules = Component_CMGame_UIModules_Private_Initialize();
+Component_CMGame_UIModules_UIModules = Component_CMGame_UIModules_Private_UpdateModulesProperties(Component_CMGame_UIModules_UIModules, Net_LibUI3_CustomizableModule_Properties);
+***
+
+***MainLoop***
+***
+if (ModulesPropertiesUpdate != Net_LibUI3_CustomizableModule_PropertiesUpdate) {
+	ModulesPropertiesUpdate = Net_LibUI3_CustomizableModule_PropertiesUpdate;
+	Component_CMGame_UIModules_UIModules = Component_CMGame_UIModules_Private_UpdateModulesProperties(Component_CMGame_UIModules_UIModules, Net_LibUI3_CustomizableModule_Properties);
+}
+***
+
+// */
+// @Component end component-cmgame-uimodules
+
+***MainInit***
+***
+declare CMlFrame Frame_Global;
+declare CMlFrame Frame_LapsCounter;
+declare CMlLabel Label_LapsCounter;
+declare CMlFrame Frame_CheckpointsCounter;
+declare CMlLabel Label_CheckpointsCounter;
+
+declare Boolean DisplayModule;
+declare Integer LapCurrent;
+declare Integer LapsTotal;
+declare Boolean IsIndependentLaps;
+declare Integer CurrentLapWaypointPlayerCount;
+declare Integer MapCheckpointsNb;
+
+declare netread Boolean Net_Race_LapsCounter_IsCPCounterVisible for Teams[0] = True;
+***
+
+***MainStart***
+***
+Frame_Global <=> (Page.GetFirstChild("frame-global") as CMlFrame);
+Frame_LapsCounter <=> (Frame_Global.GetFirstChild("frame-laps-counter") as CMlFrame);
+Label_LapsCounter <=> (Frame_LapsCounter.GetFirstChild("label-laps-counter") as CMlLabel);
+Frame_CheckpointsCounter <=> (Frame_Global.GetFirstChild("frame-checkpoints-counter") as CMlFrame);
+Label_CheckpointsCounter <=> (Frame_CheckpointsCounter.GetFirstChild("label-checkpoints-counter") as CMlLabel);
+
+DisplayModule = Frame_Global.Visible;
+LapCurrent = -123;
+LapsTotal = -123;
+CurrentLapWaypointPlayerCount = -1;
+MapCheckpointsNb = -1;
+IsIndependentLaps = False;
+if (SplitScreenCount > 1) MV_Utils::AutoScaleSplitScreen(Frame_Global, 0.5, 1.);
+***
+
+***MainLoop***
+***
+if (PageIsVisible) {
+	declare Owner <=> MV_Utils::GetOwner(This);
+	if (Owner != Null) {
+		declare netread Boolean Net_Race_LapsCounter_IsVisible for Owner;
+		if (DisplayModule != Net_Race_LapsCounter_IsVisible) {
+			DisplayModule = Net_Race_LapsCounter_IsVisible;
+			Frame_Global.Visible = Net_Race_LapsCounter_IsVisible;
+		}
+	}
+
+	if (Owner == Null && DisplayModule) {
+		DisplayModule = False;
+		Frame_Global.Visible = DisplayModule;
+	}
+
+	if (Frame_Global.Visible) {
+		if (Owner != Null) {
+			if (
+				LapCurrent != RaceHelpers::GetPlayerLap(Owner) ||
+				LapsTotal != RaceHelpers::GetLapsNb(Teams[0]) ||
+				IsIndependentLaps != RaceHelpers::IsIndependentLaps(Teams[0])
+			) {
+				LapCurrent = RaceHelpers::GetPlayerLap(Owner);
+				LapsTotal = RaceHelpers::GetLapsNb(Teams[0]);
+				IsIndependentLaps = RaceHelpers::IsIndependentLaps(Teams[0]);
+				if (LapCurrent > 0 && LapsTotal > 0 && !IsIndependentLaps) {
+					Label_LapsCounter.Value = TL::Compose("%1 %2/%3", "|Race|Lap", TL::ToText(LapCurrent), TL::ToText(LapsTotal));
+					Frame_LapsCounter.Visible = True;
+					Frame_CheckpointsCounter.RelativePosition_V3.Y = -12.;
+					if (LapCurrent > 1) {
+						AnimMgr.Add(Frame_LapsCounter, "<a scale=\"1.1\" />", 50, CAnimManager::EAnimManagerEasing::QuadOut);
+						AnimMgr.AddChain(Frame_LapsCounter, "<a scale=\"1.\" />", 50, CAnimManager::EAnimManagerEasing::QuadOut);
+					}
+				} else {
+					Frame_LapsCounter.Visible = False;
+					Frame_CheckpointsCounter.RelativePosition_V3.Y = 0.;
+				}
+			}
+
+			Frame_CheckpointsCounter.Visible = Net_Race_LapsCounter_IsCPCounterVisible && UserStore::GetUserDisplayCheckpointCounter();
+			if (
+				Frame_CheckpointsCounter.Visible && (
+					CurrentLapWaypointPlayerCount != Owner.CurrentLapWaypointTimes.count ||
+					MapCheckpointsNb != RaceHelpers::GetCheckpointsNb(Teams[0])
+				)
+			) {
+				MapCheckpointsNb = RaceHelpers::GetCheckpointsNb(Teams[0]);
+				// "CurrentLapWaypointTimes" contains the CPs crossed during this lap
+				// but also the finish so we take the min with the total count of CP
+				CurrentLapWaypointPlayerCount = Owner.CurrentLapWaypointTimes.count;
+
+				// Hide counter if there is no CP in a map
+				Label_CheckpointsCounter.Visible = MapCheckpointsNb > 0;
+
+				if (Label_CheckpointsCounter.Visible) {
+					Label_CheckpointsCounter.Value = TL::Compose("%1 %2/%3", "|Race|CP", ""^ML::Min(CurrentLapWaypointPlayerCount, MapCheckpointsNb), ""^MapCheckpointsNb);
+					if (CurrentLapWaypointPlayerCount > 0 && CurrentLapWaypointPlayerCount <= MapCheckpointsNb) {
+						AnimMgr.Add(Label_CheckpointsCounter, "<a scale=\"1.1\" />", 50, CAnimManager::EAnimManagerEasing::QuadOut);
+						AnimMgr.AddChain(Label_CheckpointsCounter, "<a scale=\"1.\" />", 50, CAnimManager::EAnimManagerEasing::QuadOut);
+					}
+				}
+			}
+		}
+	}
+}
+***
+
+
+Void ManiaView_DoNothing() {}
+
+main() {
+	+++MainInit+++
+	+++MainStart+++
+	while (True) {
+		yield;
+		+++MainLoop+++
+	}
+	+++MainEnd+++
+}
+--></script>
+</manialink>
