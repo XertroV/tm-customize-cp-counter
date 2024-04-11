@@ -2,6 +2,10 @@
 
 Change the size and location of the in-game CP counter.
 
+Allows customization of the position, scale, and H/V alignment of the in-game CP counter.
+You need to enable the in-game CP counter in settings (under HUD).
+
+
 License: Public Domain
 
 Authors: XertroV
