@@ -1,6 +1,6 @@
-# Unintrusive Checkpoint Timer
+# Customize CP Counter
 
-Moves the checkpoint timer up 21.5 units so that it is less intrusive. This fits neatly with speed splits.
+Change the size and location of the in-game CP counter.
 
 License: Public Domain
 
@@ -8,6 +8,6 @@ Authors: XertroV
 
 Suggestions/feedback: @XertroV on Openplanet discord
 
-Code/issues: [https://github.com/XertroV/tm-unintrusive-checkpoint-timer](https://github.com/XertroV/tm-unintrusive-checkpoint-timer)
+Code/issues: [https://github.com/XertroV/tm-customize-cp-counter](https://github.com/XertroV/tm-customize-cp-counter)
 
 GL HF
