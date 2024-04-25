@@ -2,7 +2,7 @@
 name     = "Customize CP Counter"
 author   = "XertroV"
 category = "Race"
-version  = "0.2.4"
+version  = "0.2.5"
 # siteid   = 355
 
 [script]
