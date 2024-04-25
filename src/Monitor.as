@@ -3,15 +3,34 @@ bool CanAccessMLElements = false;
 
 void CMapLoop() {
     auto app = cast<CGameManiaPlanet>(GetApp());
-    auto net = app.Network;
+    auto net = cast<CTrackManiaNetwork>(app.Network);
+    string mode;
+    uint failCount = 0;
     while (true) {
         yield();
         CanAccessMLElements = false;
         while (net.ClientManiaAppPlayground is null) yield();
+        mode = cast<CTrackManiaNetworkServerInfo>(net.ServerInfo).CurGameModeStr;
         AwaitGetMLObjs();
-        CanAccessMLElements = true;
-        while (net.ClientManiaAppPlayground !is null && CPCountFrame !is null) yield();
+        if (CPCountFrame is null) {
+            failCount++;
+            if (failCount < 50) {
+                sleep(50);
+                continue;
+            }
+            warn("Failed to find CP Count Frame, waiting for exit map.");
+            if (app.RootMap !is null) {
+                auto currMap = app.RootMap.Id.Value;
+                while (app.RootMap !is null && app.RootMap.Id.Value == currMap) sleep(50);
+                failCount = 0;
+            }
+        } else {
+            CanAccessMLElements = true;
+            failCount = 0;
+        }
+        while (net.ClientManiaAppPlayground !is null && CPCountFrame !is null && string(cast<CTrackManiaNetworkServerInfo>(net.ServerInfo).CurGameModeStr) == mode) yield();
         NullifyMLObjs();
+        CanAccessMLElements = false;
     }
 }
 
@@ -37,7 +56,6 @@ void AwaitGetMLObjs() {
     if (net.ClientManiaAppPlayground is null) return;
     uint count = 0;
     while (CPCountFrame is null && net.ClientManiaAppPlayground !is null && app.CurrentPlayground !is null && count < 50) {
-        yield();
         for (uint i = 0; i < cmap.UILayers.Length; i++) {
             auto layer = cmap.UILayers[i];
             if (!layer.IsLocalPageScriptRunning || !layer.IsVisible || layer.LocalPage is null) continue;
@@ -57,10 +75,10 @@ void AwaitGetMLObjs() {
                 origHorizAlign = CPCountLabel.HorizontalAlign;
                 origVertAlign = CPCountLabel.VerticalAlign;
             }
-
             break;
         }
         count++;
+        if (CPCountFrame is null) sleep(50);
     }
     if (net.ClientManiaAppPlayground is null) return;
     if (CPCountFrame is null) {
